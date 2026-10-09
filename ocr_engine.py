@@ -18,13 +18,13 @@ def _preprocess_image(image: Image.Image) -> Image.Image:
     """
     grey = image.convert('L')
     
-    # Upscale if width is small (e.g. typical WhatsApp compressed images)
-    if grey.width < 1500:
+    # Upscale ONLY if width is very small (to save Render free tier RAM)
+    if grey.width < 1000:
         grey = grey.resize((grey.width * 2, grey.height * 2), Image.Resampling.LANCZOS)
     # Downscale if width is huge (to save Render free tier CPU/RAM)
-    elif grey.width > 2500:
-        ratio = 2500 / grey.width
-        grey = grey.resize((2500, int(grey.height * ratio)), Image.Resampling.LANCZOS)
+    elif grey.width > 2000:
+        ratio = 2000 / grey.width
+        grey = grey.resize((2000, int(grey.height * ratio)), Image.Resampling.LANCZOS)
         
     # Pad with 20px white border
     padded = ImageOps.expand(grey, border=20, fill='white')

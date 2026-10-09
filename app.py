@@ -37,8 +37,14 @@ def upload_file():
         file.save(filepath)
         
         try:
+            import gc
+            
             # Process the file
             text = extract_text_from_file(filepath)
+            
+            # Immediately force garbage collection to free up memory from Tesseract/Pillow
+            gc.collect()
+            
             semester = extract_semester(text)
             courses = parse_extracted_text(text)
             
