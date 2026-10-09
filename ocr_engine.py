@@ -21,6 +21,10 @@ def _preprocess_image(image: Image.Image) -> Image.Image:
     # Upscale if width is small (e.g. typical WhatsApp compressed images)
     if grey.width < 1500:
         grey = grey.resize((grey.width * 2, grey.height * 2), Image.Resampling.LANCZOS)
+    # Downscale if width is huge (to save Render free tier CPU/RAM)
+    elif grey.width > 2500:
+        ratio = 2500 / grey.width
+        grey = grey.resize((2500, int(grey.height * ratio)), Image.Resampling.LANCZOS)
         
     # Pad with 20px white border
     padded = ImageOps.expand(grey, border=20, fill='white')
