@@ -106,10 +106,10 @@ def parse_extracted_text(text: str) -> list[dict]:
     text = text.replace('FECI3', 'FEC13').replace('4AID1- G3', '4AID1-03').replace('4AID1- 03', '4AID1-03')
     
     # Fix 4A1D, 4AlD, 4ALD (OCR confusing I with 1, l, L)
-    text = text.replace('4A1D', '4AID').replace('4AlD', '4AID').replace('4ALD', '4AID')
     text = text.replace('4a1D', '4AID').replace('4aID', '4AID')
     text = text.replace('5A1D', '5AID').replace('5AlD', '5AID').replace('SAID', '5AID')
     text = text.replace('C1T', 'CIT').replace('ClT', 'CIT').replace('GCIT', '6CIT')
+    text = text.replace('GCS', '6CS')
     
     lines = text.split('\n')
     courses: list[dict] = []

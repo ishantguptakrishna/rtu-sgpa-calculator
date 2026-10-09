@@ -21,10 +21,10 @@ def _preprocess_image(image: Image.Image) -> Image.Image:
     # Upscale ONLY if width is very small (to save Render free tier RAM)
     if grey.width < 1000:
         grey = grey.resize((grey.width * 2, grey.height * 2), Image.Resampling.LANCZOS)
-    # Downscale heavily to save Render free tier CPU time (0.1 vCPU is very slow)
-    elif grey.width > 1200:
-        ratio = 1200 / grey.width
-        grey = grey.resize((1200, int(grey.height * ratio)), Image.Resampling.LANCZOS)
+    # Downscale heavily to save Render free tier CPU time, but keep enough resolution for OCR (1600px)
+    elif grey.width > 1600:
+        ratio = 1600 / grey.width
+        grey = grey.resize((1600, int(grey.height * ratio)), Image.Resampling.LANCZOS)
         
     # Pad with 20px white border
     padded = ImageOps.expand(grey, border=20, fill='white')
