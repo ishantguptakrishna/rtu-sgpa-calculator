@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTU SGPA Calculator Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .drag-over { border-color: #6366f1 !important; background-color: #eef2ff !important; transform: scale(1.02); }
+        .glass-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-white to-cyan-50 min-h-screen text-gray-800 antialiased">
+    <div class="max-w-4xl mx-auto py-8 sm:py-12 px-4 sm:px-6 relative">
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-3 tracking-tight">RTU SGPA Calculator</h1>
+        </div>
+        
+        <!-- Upload Area -->
+        <div id="drop-zone" class="glass-card border-2 border-dashed border-indigo-200 rounded-3xl p-8 sm:p-12 text-center mb-8 transition-all duration-300 hover:shadow-2xl hover:border-indigo-300 group cursor-pointer relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-b from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <div class="relative z-10">
+                <div class="bg-indigo-100 w-16 h-16 sm:w-20 sm:h-20 mx-auto rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                    <svg class="h-8 w-8 sm:h-10 sm:w-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg sm:text-xl font-bold text-gray-800 mb-2">Drag & Drop your result</h3>
+                <p class="text-sm sm:text-base text-gray-500 mb-6">Supports PDF, PNG, or JPG formats</p>
+                
+                <div class="flex flex-col items-center justify-center">
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,.png,.jpg,.jpeg">
+                    <button onclick="document.getElementById('file-input').click()" class="bg-white border-2 border-indigo-100 text-indigo-600 font-semibold py-2 px-6 rounded-full hover:bg-indigo-50 transition-colors shadow-sm mb-4">
+                        Browse Files
+                    </button>
+                    <button id="upload-btn" class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 transition-all transform hover:-translate-y-0.5">
+                        ✨ Extract & Calculate
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden text-center py-12 glass-card rounded-3xl mb-8">
+            <div class="relative w-16 h-16 mx-auto mb-4">
+                <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p class="text-base sm:text-lg font-semibold text-gray-700">Analyzing Document...</p>
+            <p class="text-sm text-gray-500 mt-1">Extracting your grades with machine vision.</p>
+        </div>
+        
+        <!-- Error Message -->
+        <div id="error-message" class="hidden glass-card border-l-4 border-red-500 rounded-2xl p-5 mb-8 flex items-start">
+            <svg class="w-6 h-6 text-red-500 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <p class="font-bold text-red-800 text-sm sm:text-base">Processing Error</p>
+                <p id="error-text" class="text-sm sm:text-base text-red-600 mt-1">Something went wrong.</p>
+            </div>
+        </div>
+
+        <!-- Results Area -->
+        <div id="results-area" class="hidden glass-card rounded-3xl overflow-hidden shadow-2xl">
+            <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 sm:px-8 py-6 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <h2 id="semester-heading" class="text-xl sm:text-2xl font-bold text-white text-center sm:text-left drop-shadow-sm">Semester Result</h2>
+                    <button id="toggle-preview-btn" class="hidden sm:block bg-white/20 hover:bg-white/30 backdrop-blur border border-white/30 text-white text-sm px-4 py-1.5 rounded-full transition-colors shadow-sm">
+                        View Document
+                    </button>
+                </div>
+                <div class="bg-white/20 backdrop-blur-md border border-white/30 text-white px-6 py-3 rounded-2xl flex items-center gap-3 shadow-inner">
+                    <span class="text-sm uppercase tracking-wider font-semibold opacity-90">Final SGPA</span>
+                    <span id="final-sgpa" class="text-3xl font-extrabold tracking-tight">0.00</span>
+                </div>
+                <button id="toggle-preview-btn-mobile" class="sm:hidden w-full bg-white/20 hover:bg-white/30 backdrop-blur border border-white/30 text-white text-sm px-4 py-2 rounded-full transition-colors shadow-sm mt-2">
+                    View Document
+                </button>
+            </div>
+            
+            <!-- Document Preview Area -->
+            <div id="document-preview" class="hidden bg-gray-100 border-b border-gray-200">
+                <div class="p-4 flex justify-between items-center bg-gray-200 border-b border-gray-300">
+                    <span class="font-semibold text-gray-700">Uploaded Document</span>
+                    <button id="close-preview-btn" class="text-gray-500 hover:text-gray-800">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="w-full max-h-[600px] overflow-auto flex justify-center p-4" id="preview-container">
+                    <!-- Preview content goes here -->
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50/50">
+                        <tr>
+                            <th class="px-5 sm:px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Course</th>
+                            <th class="px-5 sm:px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest hidden sm:table-cell">Code</th>
+                            <th class="px-5 sm:px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Credits</th>
+                            <th class="px-5 sm:px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Grade</th>
+                            <th class="px-5 sm:px-8 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-widest">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-tbody" class="bg-white/40 divide-y divide-gray-100">
+                        <!-- Table rows generated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-5 sm:px-8 py-5 bg-gray-50/50 border-t border-gray-100">
+                <button id="add-row-btn" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold flex items-center transition-colors group">
+                    <div class="bg-indigo-100 p-1 rounded-full mr-2 group-hover:bg-indigo-200 transition-colors">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    Add Missing Subject
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-12 mb-6 text-center">
+            <p class="text-base font-semibold text-gray-700 mb-2 italic">"No Manual Math. Just Click."</p>
+            <p class="text-sm text-gray-500 font-medium mb-3">Created by</p>
+            <div class="flex items-center justify-center gap-6">
+                <a href="https://linkedin.com/in/kashish-lakhuja" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 transition-colors group">
+                    <svg class="w-5 h-5 fill-current group-hover:scale-110 transition-transform" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    <span class="font-bold">Kashish</span>
+                </a>
+                <span class="text-gray-300">|</span>
+                <a href="https://www.linkedin.com/in/ishant-kumar-gupta-276b77290" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors group">
+                    <svg class="w-5 h-5 fill-current group-hover:scale-110 transition-transform" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                    <span class="font-bold">Ishant</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const uploadBtn = document.getElementById('upload-btn');
+        const loading = document.getElementById('loading');
+        const errorArea = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const resultsArea = document.getElementById('results-area');
+        
+        uploadBtn.addEventListener('click', () => {
+            if (fileInput.files.length > 0) {
+                handleFile(fileInput.files[0]);
+            } else {
+                showError('Please select a file first.');
+            }
+        });
+
+        // Drag and drop logic
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        let currentFileUrl = null;
+        const previewContainer = document.getElementById('preview-container');
+        const documentPreview = document.getElementById('document-preview');
+        
+        // Preview Toggle Logic
+        function togglePreview() {
+            documentPreview.classList.toggle('hidden');
+        }
+        
+        document.getElementById('toggle-preview-btn').addEventListener('click', togglePreview);
+        document.getElementById('toggle-preview-btn-mobile').addEventListener('click', togglePreview);
+        document.getElementById('close-preview-btn').addEventListener('click', () => {
+            documentPreview.classList.add('hidden');
+        });
+
+        function handleFile(file) {
+            // Reset UI
+            errorArea.classList.add('hidden');
+            resultsArea.classList.add('hidden');
+            documentPreview.classList.add('hidden');
+            loading.classList.remove('hidden');
+            dropZone.classList.add('opacity-50', 'pointer-events-none');
+            
+            // Create preview URL
+            if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
+            currentFileUrl = URL.createObjectURL(file);
+            
+            if (file.type.startsWith('image/')) {
+                previewContainer.innerHTML = `<img src="${currentFileUrl}" class="max-w-full h-auto rounded shadow-sm border border-gray-300">`;
+            } else if (file.type === 'application/pdf') {
+                previewContainer.innerHTML = `<embed src="${currentFileUrl}" type="application/pdf" class="w-full h-[600px] border border-gray-300 rounded shadow-sm">`;
+            } else {
+                previewContainer.innerHTML = `<p class="text-gray-500">Preview not available for this file type.</p>`;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json().then(data => ({status: response.status, body: data})))
+            .then(result => {
+                loading.classList.add('hidden');
+                dropZone.classList.remove('opacity-50', 'pointer-events-none');
+                
+                if (result.status === 200) {
+                    displayResults(result.body);
+                } else {
+                    showError(result.body.error || 'An error occurred during processing.');
+                }
+            })
+            .catch(error => {
+                loading.classList.add('hidden');
+                dropZone.classList.remove('opacity-50', 'pointer-events-none');
+                showError('Network error or server is unreachable.');
+            });
+        }
+        
+        function showError(msg) {
+            errorText.textContent = msg;
+            errorArea.classList.remove('hidden');
+        }
+        
+        function displayResults(data) {
+            document.getElementById('semester-heading').textContent = 
+                (data.semester && data.semester !== 'UNKNOWN') ? `Semester ${data.semester} Result` : 'Result Analysis';
+            
+            document.getElementById('final-sgpa').textContent = data.sgpa.toFixed(2);
+            
+            const tbody = document.getElementById('results-tbody');
+            tbody.innerHTML = '';
+            
+            data.results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.classList.add('hover:bg-indigo-50/30', 'transition-colors');
+                tr.innerHTML = `
+                    <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.title}</td>
+                    <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">${item.code}</td>
+                    <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <input type="number" step="0.5" value="${item.credits}" class="credit-input border border-gray-200 rounded p-1 w-12 sm:w-16 text-sm bg-white/50 focus:ring-indigo-500 focus:border-indigo-500 text-center">
+                    </td>
+                    <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                        <select class="grade-select bg-white/50 border border-gray-200 text-gray-900 text-sm rounded focus:ring-indigo-500 focus:border-indigo-500 block p-1.5 font-bold shadow-sm">
+                            ${['A++', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'E+', 'E', 'F'].map(g => 
+                                `<option value="${g}" ${g === item.grade ? 'selected' : ''}>${g}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600 point-cell">${item.point}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Add event listeners for recalculation
+            document.querySelectorAll('.grade-select').forEach(select => {
+                select.addEventListener('change', recalculateSGPA);
+            });
+            document.querySelectorAll('.credit-input').forEach(input => {
+                input.addEventListener('input', recalculateSGPA);
+            });
+            
+            resultsArea.classList.remove('hidden');
+            resultsArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Fire Confetti!
+            if(window.confetti) {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#4f46e5', '#3b82f6', '#06b6d4']
+                });
+            }
+        }
+
+        const GRADE_POINTS = { 'A++': 10, 'A+': 9, 'A': 8.5, 'B+': 8, 'B': 7.5, 'C+': 7, 'C': 6.5, 'D+': 6, 'D': 5.5, 'E+': 5, 'E': 4, 'F': 0 };
+
+        function recalculateSGPA() {
+            let totalCredits = 0;
+            let totalPoints = 0;
+            
+            const rows = document.getElementById('results-tbody').querySelectorAll('tr');
+            rows.forEach(row => {
+                const creditInput = row.querySelector('.credit-input');
+                const credit = creditInput ? parseFloat(creditInput.value) : parseFloat(row.querySelector('.credit-cell').textContent);
+                const grade = row.querySelector('.grade-select').value;
+                const point = GRADE_POINTS[grade] || 0;
+                
+                const earned = credit * point;
+                
+                row.querySelector('.point-cell').textContent = point;
+                // Removed total-cell from UI
+                
+                totalCredits += credit;
+                totalPoints += earned;
+            });
+            
+            // RTU truncates to 2 decimal places rather than rounding up
+            let newSGPA = '0.00';
+            if (totalCredits > 0) {
+                const rawSGPA = totalPoints / totalCredits;
+                newSGPA = (Math.floor(rawSGPA * 100) / 100).toFixed(2);
+            }
+            document.getElementById('final-sgpa').textContent = newSGPA;
+        }
+
+        document.getElementById('add-row-btn').addEventListener('click', () => {
+            const tbody = document.getElementById('results-tbody');
+            const tr = document.createElement('tr');
+            tr.classList.add('hover:bg-indigo-50/30', 'transition-colors');
+            tr.innerHTML = `
+                <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><input type="text" value="New Subject" class="border border-gray-200 rounded p-1 w-full text-sm bg-white/50 focus:ring-indigo-500"></td>
+                <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell"><input type="text" value="CODE" class="border border-gray-200 rounded p-1 w-16 sm:w-20 text-sm bg-white/50 text-center"></td>
+                <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm text-gray-500"><input type="number" step="0.5" value="2.0" class="credit-input border border-gray-200 rounded p-1 w-12 sm:w-16 text-sm bg-white/50 focus:ring-indigo-500 text-center"></td>
+                <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                    <select class="grade-select bg-white/50 border border-gray-200 text-gray-900 text-sm rounded focus:ring-indigo-500 block p-1.5 font-bold shadow-sm">
+                        ${['A++', 'A+', 'A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'E+', 'E', 'F'].map(g => 
+                            `<option value="${g}">${g}</option>`
+                        ).join('')}
+                    </select>
+                </td>
+                <td class="px-5 sm:px-8 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600 point-cell">8.5</td>
+            `;
+            
+            tr.querySelector('.credit-input').addEventListener('input', recalculateSGPA);
+            tr.querySelector('.grade-select').addEventListener('change', recalculateSGPA);
+            
+            tbody.appendChild(tr);
+            recalculateSGPA();
+        });
+    </script>
+</body>
+</html>
