@@ -21,10 +21,10 @@ def _preprocess_image(image: Image.Image) -> Image.Image:
     # Upscale ONLY if width is very small (to save Render free tier RAM)
     if grey.width < 1000:
         grey = grey.resize((grey.width * 2, grey.height * 2), Image.Resampling.LANCZOS)
-    # Downscale if width is huge (to save Render free tier CPU/RAM)
-    elif grey.width > 2000:
-        ratio = 2000 / grey.width
-        grey = grey.resize((2000, int(grey.height * ratio)), Image.Resampling.LANCZOS)
+    # Downscale heavily to save Render free tier CPU time (0.1 vCPU is very slow)
+    elif grey.width > 1200:
+        ratio = 1200 / grey.width
+        grey = grey.resize((1200, int(grey.height * ratio)), Image.Resampling.LANCZOS)
         
     # Pad with 20px white border
     padded = ImageOps.expand(grey, border=20, fill='white')
@@ -50,10 +50,11 @@ def extract_text_from_file(file_path: str) -> str:
         if os.name == 'nt':
             images = convert_from_path(
                 file_path,
+                dpi=150,
                 poppler_path=r'C:\Users\gupta\AppData\Local\Microsoft\WinGet\Packages\oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe\poppler-25.07.0\Library\bin'
             )
         else:
-            images = convert_from_path(file_path)
+            images = convert_from_path(file_path, dpi=150)
             
         for img in images:
             processed = _preprocess_image(img)
